@@ -1,11 +1,15 @@
 [tool.poetry]
-name = "template"
+name = "experience_modeler"
 version = "0.1.0"
 description = ""
 authors = ["frapercan <frapercan1@alum.us.es>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+pyyaml = "^6.0.1"
+torchvision = "^0.15.2"
+webdataset = "^0.2.48"
+tqdm = "^4.66.1"
 
 
 [tool.poetry.dev-dependencies]
