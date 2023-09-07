@@ -1,22 +1,22 @@
-datasets_directory: "/home/xaxi/PycharmProjects/experience-recorder/datasets/2048-23-08-clean_real/"
-modeled_output_directory: "/home/xaxi/PycharmProjects/experience-modeler/datasets_modeled/2048/"
-tar_output_directory: "datasets.tar"
-metadata_output_directory: "datasets.json"
+datasets_directory: "/home/xaxi/PycharmProjects/experience-recorder/datasets/2048"
+modeled_output_directory: "/home/xaxi/PycharmProjects/experience-modeler/datasets_modeled/2048-full/"
+tar_output_directory: "datasets-full.tar"
+metadata_output_directory: "datasets-full.json"
 
-rolling: 10
+
+
 modeling_pipelines:
-  rolling_actions_scores:
-    functions:
-      rolling:
+  rolling_img_state:
         params:
-          horizon: 5
-          source:
-            - score
-            - action
-            - state
-
-resampling_scale:
-  - 128
-  - 128
+          horizon: 1
+          resize:
+            - 224
+            - 224
+  rolling_dimension:
+    params:
+      horizon: 5
+      source:
+        - score
+        - action
 
 
