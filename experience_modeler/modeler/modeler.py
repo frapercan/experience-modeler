@@ -29,9 +29,6 @@ def tensor_to_bytes(tensor):
     return buffer.getvalue()
 
 
-# read a png image
-
-
 # Setting up the logger for this module
 fmt = '[%(asctime)-15s] [%(levelname)s] %(name)s: %(message)s'
 logging.basicConfig(format=fmt, level=logging.INFO)
@@ -41,6 +38,7 @@ logger = logging.getLogger(__name__)
 class Modeler:
 
     def __init__(self, config_path):
+        self.samples_basenames = []
         with open(config_path, 'r') as config_file:
             self.config = yaml.safe_load(config_file)
 
@@ -61,7 +59,7 @@ class Modeler:
         except OSError as e:
             logger.error(f"Error: {e}")
 
-    def process_dataset(self):
+    def preprocess_dataset(self):
         modeled_output_directory = self.config['modeled_output_directory']
 
         self.datasets = [os.path.join(modeled_output_directory, dataset_dir) for dataset_dir in
@@ -80,32 +78,44 @@ class Modeler:
                 getattr(rollers, pipeline)(sample_locations, **params)
 
     def generate_tar_iterable(self):
-        modeled_output_directory = self.config['modeled_output_directory']
         tar_output_directory = self.config['tar_output_directory']
 
-        samples_basenames = []
-        for dataset_folder in os.listdir(modeled_output_directory):
-            filenames = os.listdir(os.path.join(modeled_output_directory, dataset_folder))
-            basenames = [os.path.join(modeled_output_directory, dataset_folder, basename.split('.')[0]) for basename in
-                         filenames if basename.split('.')[1] == 'json']
-            samples_basenames.append(basenames)
-        samples_basenames = list(set(reduce(lambda x, y: x + y, samples_basenames)))
-        samples_basenames.sort()
-
-        with open(self.config['metadata_output_directory'], "w") as file:
-            json.dump({'length': len(samples_basenames)}, file)
-
         with wds.TarWriter(tar_output_directory) as sink:
-            for i, basename in tqdm(enumerate(samples_basenames), total=len(samples_basenames),
+            for i, basename in tqdm(enumerate(self.samples_basenames), total=len(self.samples_basenames),
                                     desc="Writing tar iterable"):
 
                 try:
                     sample = create_sample(basename,
                                            self.config['modeling_pipelines']['rolling_img_state']['params']['horizon'])
-                    # print(sample)
                     sink.write(sample)
                 except Exception as e:
                     raise (e)
+
+    def generate_metadata(self):
+
+        metadata = {}
+        metadata['length'] = len(self.samples_basenames)
+        metadata['actions'] = []
+        for sample_basename in self.samples_basenames:
+            json_path = f"{sample_basename}.json"
+            with open(json_path, 'r') as json_file:
+                json_data = json.load(json_file)
+                if json_data['action'] not in metadata['actions']:
+                    metadata['actions'].append(json_data['action'])
+
+        with open(self.config['metadata_output_directory'], "w") as file:
+            json.dump(metadata, file)
+
+    def flatten_samples_multiple_dir(self):
+        modeled_output_directory = self.config['modeled_output_directory']
+
+        for dataset_folder in os.listdir(modeled_output_directory):
+            filenames = os.listdir(os.path.join(modeled_output_directory, dataset_folder))
+            basenames = [os.path.join(modeled_output_directory, dataset_folder, basename.split('.')[0]) for basename in
+                         filenames if basename.split('.')[1] == 'json']
+            self.samples_basenames.append(basenames)
+        self.samples_basenames = list(set(reduce(lambda x, y: x + y, self.samples_basenames)))
+        self.samples_basenames.sort()
 
 
 def create_sample(path, horizon):
